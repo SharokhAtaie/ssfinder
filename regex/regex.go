@@ -39,6 +39,7 @@ func DomSinker(str, url string) {
 	}
 
 	fmt.Printf("%s[Link]%s %s\n\n", BlueStart, End, url)
+
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	resultFound := false
@@ -54,13 +55,37 @@ func DomSinker(str, url string) {
 			var matches []string
 			for i, line := range lines {
 				if re.MatchString(line) {
-					// Highlight the matching parts of the line
-					highlightedLine := re.ReplaceAllStringFunc(line, func(match string) string {
-						return GreenStart + match + End
-					})
+					// Find the match position and length
+					loc := re.FindStringIndex(line)
+					if loc != nil {
+						// Extract 20 characters before the match (handle cases where there are fewer than 20 characters)
+						start := loc[0] - 20
+						if start < 0 {
+							start = 0
+						}
+						prefix := line[start:loc[0]]
 
-					// Collect match and its line number
-					matches = append(matches, fmt.Sprintf("Line %s%d%s: %s", OrangeStart, i+1, End, highlightedLine))
+						// Extract only 60 characters of the match
+						matchPart := line[loc[0]:loc[1]]
+						if len(matchPart) > 60 {
+							matchPart = matchPart[:60]
+						}
+
+						// Extract 20 characters after the match (if needed)
+						end := loc[1]
+						if end+20 > len(line) {
+							end = len(line)
+						} else {
+							end += 20
+						}
+						suffix := line[loc[1]:end]
+
+						// Combine prefix, highlighted match, and suffix
+						highlightedLine := fmt.Sprintf("%s%s%s", prefix, GreenStart+matchPart+End, suffix)
+
+						// Collect match and its line number
+						matches = append(matches, fmt.Sprintf("Line %s%d%s: ...%s", OrangeStart, i+1, End, highlightedLine))
+					}
 				}
 			}
 
@@ -87,6 +112,6 @@ func DomSinker(str, url string) {
 	wg.Wait()
 
 	if !resultFound {
-		fmt.Println("No result")
+		fmt.Println("No results found")
 	}
 }
