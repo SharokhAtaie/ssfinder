@@ -1,12 +1,12 @@
 # SSFinder
 
-**DOM XSS source/sink finder** — finds user-controllable sources (e.g. `location.hash`, `document.URL`) and dangerous sinks (e.g. `innerHTML`, `eval`, `location.href =`) in JavaScript.
+**DOM XSS source/sink finder** — finds user-controllable sources (e.g. `location.hash`, `URLSearchParams`) and dangerous sinks (e.g. `innerHTML`, `location.href =`) in JavaScript.
 
 ## Features
 
-- **Sources**: DOM XSS sources (URL, storage, postMessage, etc.)
-- **Sinks**: Dangerous sinks with **severity** (Critical / High / Medium / Low)
-- **CLI**: Colored output, severity badges, `-json`, `-o` to save to file, directory scan
+- **Sources**: URL, Storage, Message, React, Router (with importance highlighting)
+- **Sinks**: DOM, React, Vue, Angular, jQuery, Navigation (printed with Navigation first)
+- **CLI**: Colored output, category labels, `-json`, `-o` to save to file, directory scan
 
 ## Installation
 
@@ -59,7 +59,8 @@ ssfinder -f script.js -silent
 ## Example output
 
 - **Summary**: Counts of sources and sinks.
-- **Sinks** and **Sources** sections: each line is `Line N | name | snippet` for easy reading.
+- **Sinks** (Navigation first): `[Navigation]` / `[DOM]` / `[React]` etc., then `Line N | name | snippet`.
+- **Sources**: `[URL]` / `[React]` / `[Storage]` / `[Message]` etc., then `Line N | name | snippet`.
 - Line numbers are derived from the file/response (1 + newlines before the match).
 
 ---

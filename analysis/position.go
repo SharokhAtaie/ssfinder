@@ -1,4 +1,3 @@
-// position.go provides shared helpers for line numbers and snippet extraction.
 package analysis
 
 import "strings"

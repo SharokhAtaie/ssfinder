@@ -1,7 +1,7 @@
+// Package functions provides HTTP fetch, URL validation, and JS beautification.
 package functions
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -30,12 +30,6 @@ func BeautifyJS(code string) string {
 		return code
 	}
 	return ast.JSString()
-}
-
-func HandleErr(str string, err error) {
-	if err != nil {
-		fmt.Println(str, err)
-	}
 }
 
 // Get fetches the URL and returns the raw response body.

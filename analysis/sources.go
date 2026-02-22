@@ -1,3 +1,4 @@
+// Package analysis scans JavaScript for DOM XSS sources and sinks.
 package analysis
 
 import (
@@ -16,19 +17,31 @@ type Source struct {
 }
 
 // Predefined DOM XSS sources (user-controllable data).
+// Includes browser APIs + framework-specific (React, Vue, Next.js, Angular).
 var SourceDefinitions = []struct {
 	Name        string
 	Pattern     string
 	Description string
 	Category    string
 }{
-	{"location.search", `(?i)(?:window\.)?location\.search\b`, "Query string (read)", "URL"},
-	{"location.hash", `(?i)(?:window\.)?location\.hash\b`, "Fragment # (read)", "URL"},
-	{"window.name", `(?i)window\.name\b`, "Window name (read)", "Storage"},
+	// Browser / URL
+	{"location.hash", `(?i)(?:window\.)?location\.hash\b`, "Fragment (read)", "URL"},
+	{"URLSearchParams", `(?i)(?:new\s+)?URLSearchParams\s*\(`, "URL params", "URL"},
+	{"searchParams.get", `(?i)searchParams\.get\s*\(`, "Get URL param", "URL"},
+	// Storage
 	{"localStorage", `(?i)localStorage\.getItem\s*\(|(?i)localStorage\s*\[`, "LocalStorage", "Storage"},
 	{"sessionStorage", `(?i)sessionStorage\.getItem\s*\(|(?i)sessionStorage\s*\[`, "SessionStorage", "Storage"},
+	// Message
 	{"postMessage", `(?i)(?:window\.)?addEventListener\s*\(\s*['\"]message['\"]`, "PostMessage listener", "Message"},
-	{"URLSearchParams", `(?i)(?:new\s+)?URLSearchParams\s*\(`, "URL params", "URL"},
+	// React / React Query / TanStack (matches both useHook() and minified (0, x.useHook)())
+	{"useQuery", `(?:\buseQuery\s*\(|\.useQuery\s*\))`, "React Query data", "React"},
+	{"useMutation", `(?:\buseMutation\s*\(|\.useMutation\s*\))`, "React Query mutation", "React"},
+	{"useSearchParams", `(?:\buseSearchParams\s*\(|\.useSearchParams\s*\))`, "React Router query string", "React"},
+	{"useParams", `(?:\buseParams\s*\(|\.useParams\s*\))`, "React Router path params", "React"},
+	// Next.js / Vue Router
+	{"router.query", `(?i)router\.query\b`, "Next.js route query", "Router"},
+	{"route.query", `(?i)route\.query\b`, "Vue/React route query", "Router"},
+	{"route.params", `(?i)route\.params\b`, "Vue/React route params", "Router"},
 }
 
 // FindSources returns all source occurrences in code. Line numbers are computed from

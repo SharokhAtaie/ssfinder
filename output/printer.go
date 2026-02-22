@@ -1,9 +1,11 @@
+// Package output formats and prints analysis results.
 package output
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	"github.com/SharokhAtaie/ssfinder/analysis"
@@ -11,31 +13,37 @@ import (
 
 // ANSI colors
 const (
-	Reset   = "\033[0m"
+	Reset  = "\033[0m"
 	Bold   = "\033[1m"
 	Dim    = "\033[2m"
-	Red    = "\033[31m"
 	Green  = "\033[32m"
 	Yellow = "\033[33m"
-	Blue   = "\033[34m"
-	White  = "\033[37m"
-	BgRed  = "\033[41m"
 	Cyan   = "\033[36m"
 )
 
-func severityBadge(s analysis.Severity) string {
-	switch s {
-	case analysis.Critical:
-		return BgRed + White + Bold + " CRITICAL " + Reset
-	case analysis.High:
-		return Red + Bold + " HIGH " + Reset
-	case analysis.Medium:
-		return Yellow + " MEDIUM " + Reset
-	case analysis.Low:
-		return Dim + " LOW " + Reset
-	default:
-		return " INFO "
+// sinkCategoryOrder: Navigation first then others.
+var sinkCategoryOrder = map[string]int{
+	"Navigation": 0, "DOM": 1, "React": 2, "Vue": 3, "Angular": 4, "jQuery": 5,
+}
+
+func sinkLabel(cat string) string {
+	if cat == "Navigation" {
+		return Yellow + "[" + cat + "]" + Reset
 	}
+	return Dim + "[" + cat + "]" + Reset
+}
+
+// sourceCategoryOrder: URL, React, Router first; then Storage, Message.
+var sourceCategoryOrder = map[string]int{
+	"URL": 0, "React": 1, "Router": 2, "Storage": 3, "Message": 4,
+}
+
+// sourceLabel: URL, React, Router = more important (yellow); Storage, Message = less important (dim).
+func sourceLabel(cat string) string {
+	if cat == "Storage" || cat == "Message" {
+		return Dim + "[" + cat + "]" + Reset
+	}
+	return Yellow + "[" + cat + "]" + Reset
 }
 
 // PrintResult prints the analysis result to w.
@@ -55,8 +63,21 @@ func PrintResult(w io.Writer, r *analysis.Result) {
 	if sinkCount > 0 {
 		fmt.Fprintf(w, "%s%s%s\n", Bold, "▸ Sinks", Reset)
 		fmt.Fprintln(w, strings.Repeat("─", 72))
-		for _, s := range r.Sinks {
-			fmt.Fprintf(w, "  %s Line %-5d | %s | %s\n", severityBadge(s.Severity), s.Line, s.Name, trim(s.Snippet, 60))
+		sinks := make([]analysis.Sink, len(r.Sinks))
+		copy(sinks, r.Sinks)
+		sort.Slice(sinks, func(i, j int) bool {
+			oi, ok1 := sinkCategoryOrder[sinks[i].Category]
+			oj, ok2 := sinkCategoryOrder[sinks[j].Category]
+			if !ok1 {
+				oi = 99
+			}
+			if !ok2 {
+				oj = 99
+			}
+			return oi < oj
+		})
+		for _, s := range sinks {
+			fmt.Fprintf(w, "  %s Line %-5d | %s | %s\n", sinkLabel(s.Category), s.Line, s.Name, trim(s.Snippet, 60))
 		}
 		fmt.Fprintln(w)
 	}
@@ -64,8 +85,21 @@ func PrintResult(w io.Writer, r *analysis.Result) {
 	if srcCount > 0 {
 		fmt.Fprintf(w, "%s%s%s\n", Bold, "▸ Sources", Reset)
 		fmt.Fprintln(w, strings.Repeat("─", 72))
-		for _, s := range r.Sources {
-			fmt.Fprintf(w, "  %s Line %-5d | %s | %s\n", Blue+"[src]"+Reset, s.Line, s.Name, trim(s.Snippet, 60))
+		sources := make([]analysis.Source, len(r.Sources))
+		copy(sources, r.Sources)
+		sort.Slice(sources, func(i, j int) bool {
+			oi, ok1 := sourceCategoryOrder[sources[i].Category]
+			oj, ok2 := sourceCategoryOrder[sources[j].Category]
+			if !ok1 {
+				oi = 99
+			}
+			if !ok2 {
+				oj = 99
+			}
+			return oi < oj
+		})
+		for _, s := range sources {
+			fmt.Fprintf(w, "  %s Line %-5d | %s | %s\n", sourceLabel(s.Category), s.Line, s.Name, trim(s.Snippet, 60))
 		}
 		fmt.Fprintln(w)
 	}
@@ -104,15 +138,16 @@ func PrintResultsJSON(w io.Writer, results []*analysis.Result) {
 
 func resultToJSON(r *analysis.Result) interface{} {
 	type jSource struct {
-		Name string `json:"name"`
-		Line int    `json:"line"`
-		Desc string `json:"description"`
+		Name     string `json:"name"`
+		Line     int    `json:"line"`
+		Category string `json:"category"`
+		Desc     string `json:"description"`
 	}
 	type jSink struct {
-		Name string `json:"name"`
-		Line int    `json:"line"`
-		Sev  string `json:"severity"`
-		Desc string `json:"description"`
+		Name     string `json:"name"`
+		Line     int    `json:"line"`
+		Category string `json:"category"`
+		Desc     string `json:"description"`
 	}
 	out := struct {
 		Target  string    `json:"target"`
@@ -122,10 +157,10 @@ func resultToJSON(r *analysis.Result) interface{} {
 		Target: r.Target,
 	}
 	for _, s := range r.Sources {
-		out.Sources = append(out.Sources, jSource{Name: s.Name, Line: s.Line, Desc: s.Description})
+		out.Sources = append(out.Sources, jSource{Name: s.Name, Line: s.Line, Category: s.Category, Desc: s.Description})
 	}
 	for _, s := range r.Sinks {
-		out.Sinks = append(out.Sinks, jSink{Name: s.Name, Line: s.Line, Sev: string(s.Severity), Desc: s.Description})
+		out.Sinks = append(out.Sinks, jSink{Name: s.Name, Line: s.Line, Category: s.Category, Desc: s.Description})
 	}
 	return out
 }

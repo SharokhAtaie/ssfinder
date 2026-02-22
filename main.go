@@ -1,3 +1,4 @@
+// ssfinder finds DOM XSS sources and sinks in JavaScript files.
 package main
 
 import (
@@ -85,9 +86,12 @@ func main() {
 		allURLs = append(allURLs, opt.url)
 	}
 	if opt.list != "" {
-		file, err := os.ReadFile(opt.list)
-		functions.HandleErr("can't open list file: ", err)
-		allURLs = append(allURLs, strings.Fields(string(file))...)
+		b, err := os.ReadFile(opt.list)
+		if err != nil {
+			gologger.Error().Msgf("can't open list file: %v", err)
+		} else {
+			allURLs = append(allURLs, strings.Fields(string(b))...)
+		}
 	}
 
 	for _, u := range allURLs {
@@ -109,7 +113,10 @@ func main() {
 
 func analyzeFileOrDir(path string, console io.Writer, outFile *os.File, jsonOut bool) {
 	info, err := os.Stat(path)
-	functions.HandleErr("can't stat path: ", err)
+	if err != nil {
+		gologger.Error().Msgf("can't stat path %s: %v", path, err)
+		return
+	}
 
 	if info.IsDir() {
 		var jsFiles []string
@@ -125,7 +132,10 @@ func analyzeFileOrDir(path string, console io.Writer, outFile *os.File, jsonOut 
 			}
 			return nil
 		})
-		functions.HandleErr("walk directory: ", err)
+		if err != nil {
+			gologger.Error().Msgf("walk directory: %v", err)
+			return
+		}
 		if len(jsFiles) == 0 {
 			gologger.Warning().Msgf("no .js files found in %s", path)
 			return
