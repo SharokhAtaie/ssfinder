@@ -43,7 +43,7 @@ var SinkDefinitions = []struct {
 	{"jQuery.prepend", `(?i)\$\([^)]+\)\.prepend\s*\(`, "jQuery prepend HTML", "jQuery"},
 	// Navigation / URL (more sensitive)
 	{"location.href =", `(?i)(?:window\.)?location\.href\s*=`, "Redirect", "Navigation"},
-	{"location =", `(?i)(?:window\.)?location\s*=`, "Redirect", "Navigation"},
+	{"location =", `(?i)(?:window\.)?\blocation\b\s*=`, "Redirect", "Navigation"},
 	{"location.replace", `(?i)(?:window\.)?location\.replace\s*\(`, "Redirect", "Navigation"},
 	{"location.assign", `(?i)(?:window\.)?location\.assign\s*\(`, "Redirect", "Navigation"},
 	{"window.open", `(?i)window\.open\s*\(`, "New window", "Navigation"},
