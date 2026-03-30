@@ -34,8 +34,6 @@ var SourceDefinitions = []struct {
 	// Message
 	{"postMessage", `(?i)(?:window\.)?addEventListener\s*\(\s*['\"]message['\"]`, "PostMessage listener", "Message"},
 	// React / React Query / TanStack (matches both useHook() and minified (0, x.useHook)())
-	{"useQuery", `(?:\buseQuery\s*\(|\.useQuery\s*\))`, "React Query data", "React"},
-	{"useMutation", `(?:\buseMutation\s*\(|\.useMutation\s*\))`, "React Query mutation", "React"},
 	{"useSearchParams", `(?:\buseSearchParams\s*\(|\.useSearchParams\s*\))`, "React Router query string", "React"},
 	{"useParams", `(?:\buseParams\s*\(|\.useParams\s*\))`, "React Router path params", "React"},
 	// Next.js / Vue Router
