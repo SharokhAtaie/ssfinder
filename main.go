@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/SharokhAtaie/ssfinder/analysis"
 	"github.com/SharokhAtaie/ssfinder/functions"
@@ -94,21 +96,30 @@ func main() {
 		}
 	}
 
-	for _, u := range allURLs {
-		if !functions.IsValidURL(u) {
-			gologger.Error().Msgf("Invalid URL: %s", u)
-			continue
-		}
-		code, err := functions.Get(u)
-		if err != nil {
-			gologger.Error().Msgf("Failed to fetch %s: %v", u, err)
-			continue
-		}
-		// Beautify URL response so minified/one-line JS gets meaningful line numbers
-		code = functions.BeautifyJS(code)
-		res := analysis.Run(code, u)
-		printResult(console, outFile, res, opt.json)
+	// Process URLs concurrently with worker pool
+	const maxWorkers = 5
+	urlChan := make(chan string, len(allURLs))
+	var wg sync.WaitGroup
+	
+	// Start workers
+	for i := 0; i < maxWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for u := range urlChan {
+				processURL(u, console, outFile, opt.json)
+			}
+		}()
 	}
+	
+	// Send URLs to workers
+	for _, u := range allURLs {
+		urlChan <- u
+	}
+	close(urlChan)
+	
+	// Wait for all workers to complete
+	wg.Wait()
 }
 
 func analyzeFileOrDir(path string, console io.Writer, outFile *os.File, jsonOut bool) {
@@ -140,27 +151,56 @@ func analyzeFileOrDir(path string, console io.Writer, outFile *os.File, jsonOut 
 			gologger.Warning().Msgf("no .js files found in %s", path)
 			return
 		}
-		if jsonOut {
-			var allResults, fileResults []*analysis.Result
-			for _, p := range jsFiles {
-				res := analyzeOneFile(p)
-				if res != nil {
-					allResults = append(allResults, res)
-					if hasFindings(res) {
-						fileResults = append(fileResults, res)
+		
+		// Process files concurrently
+		const maxWorkers = 3
+		fileChan := make(chan string, len(jsFiles))
+		resultChan := make(chan *analysis.Result, len(jsFiles))
+		var wg sync.WaitGroup
+		
+		// Start workers
+		for i := 0; i < maxWorkers; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for p := range fileChan {
+					res := analyzeOneFile(p)
+					if res != nil {
+						resultChan <- res
 					}
 				}
+			}()
+		}
+		
+		// Send files to workers
+		for _, p := range jsFiles {
+			fileChan <- p
+		}
+		close(fileChan)
+		
+		// Close result channel when all workers are done
+		go func() {
+			wg.Wait()
+			close(resultChan)
+		}()
+		
+		// Collect results
+		var allResults, fileResults []*analysis.Result
+		for res := range resultChan {
+			allResults = append(allResults, res)
+			if hasFindings(res) {
+				fileResults = append(fileResults, res)
 			}
+		}
+		
+		if jsonOut {
 			output.PrintResultsJSON(console, allResults)
 			if outFile != nil && len(fileResults) > 0 {
 				output.PrintResultsJSON(outFile, fileResults)
 			}
 		} else {
-			for _, p := range jsFiles {
-				res := analyzeOneFile(p)
-				if res != nil {
-					printResult(console, outFile, res, false)
-				}
+			for _, res := range allResults {
+				printResult(console, outFile, res, false)
 			}
 		}
 		return
@@ -170,6 +210,23 @@ func analyzeFileOrDir(path string, console io.Writer, outFile *os.File, jsonOut 
 	if res != nil {
 		printResult(console, outFile, res, jsonOut)
 	}
+}
+
+func processURL(u string, console io.Writer, outFile *os.File, jsonOut bool) {
+	if !functions.IsValidURL(u) {
+		gologger.Error().Msgf("Invalid URL: %s", u)
+		return
+	}
+	code, err := functions.Get(u)
+	if err != nil {
+		gologger.Error().Msgf("Failed to fetch %s: %v", u, err)
+		return
+	}
+	// Beautify URL response so minified/one-line JS gets meaningful line numbers
+	code = functions.BeautifyJS(code)
+	res := analysis.Run(code, u)
+	res.Timestamp = time.Now().Format(time.RFC3339)
+	printResult(console, outFile, res, jsonOut)
 }
 
 func hasFindings(r *analysis.Result) bool {
@@ -187,7 +244,9 @@ func analyzeOneFile(path string) *analysis.Result {
 	if functions.ShouldBeautify(code) {
 		code = functions.BeautifyJS(code)
 	}
-	return analysis.Run(code, path)
+	res := analysis.Run(code, path)
+	res.Timestamp = time.Now().Format(time.RFC3339)
+	return res
 }
 
 func printResult(console io.Writer, outFile *os.File, res *analysis.Result, jsonOut bool) {

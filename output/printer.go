@@ -21,26 +21,33 @@ const (
 	Cyan   = "\033[36m"
 )
 
-// sinkCategoryOrder: Navigation first then others.
+// sinkCategoryOrder: Critical/High severity first, then Medium, then Low
 var sinkCategoryOrder = map[string]int{
-	"Navigation": 0, "DOM": 1, "React": 2, "Vue": 3, "Angular": 4, "jQuery": 5,
+	"Navigation": 0, "Execution": 1, "DOM": 2,
+	"React": 3, "Vue": 4, "Angular": 5, "jQuery": 6,
 }
 
 func sinkLabel(cat string) string {
-	if cat == "Navigation" {
+	// Critical severity - Red (Navigation, Execution)
+	if cat == "Navigation" || cat == "Execution" {
+		return "\033[31m[" + cat + "]" + Reset
+	}
+	// High severity - Yellow (DOM, WebComponents)
+	if cat == "DOM" || cat == "WebComponents" {
 		return Yellow + "[" + cat + "]" + Reset
 	}
+	// Medium/Low - Dim
 	return Dim + "[" + cat + "]" + Reset
 }
 
-// sourceCategoryOrder: URL, React, Router first; then Storage, Message.
+// sourceCategoryOrder: URL and frameworks first, then Storage, then others
 var sourceCategoryOrder = map[string]int{
-	"URL": 0, "React": 1, "Router": 2, "Storage": 3, "Message": 4,
+	"URL": 0, "React": 1, "Router": 2, "Svelte": 3, "Message": 4, "Storage": 5,
 }
 
-// sourceLabel: URL, React, Router = more important (yellow); Storage, Message = less important (dim).
+// sourceLabel: URL, React, Router, Svelte, Message = more important (yellow); Storage = dim
 func sourceLabel(cat string) string {
-	if cat == "Storage" || cat == "Message" {
+	if cat == "Storage" {
 		return Dim + "[" + cat + "]" + Reset
 	}
 	return Yellow + "[" + cat + "]" + Reset
@@ -55,6 +62,7 @@ func PrintResult(w io.Writer, r *analysis.Result) {
 
 	srcCount := len(r.Sources)
 	sinkCount := len(r.Sinks)
+	
 	fmt.Fprintf(w, "  %sSources%s: %s%d%s  %sSinks%s: %s%d%s\n",
 		Bold, Reset, Green, srcCount, Reset,
 		Bold, Reset, Yellow, sinkCount, Reset)
@@ -118,22 +126,53 @@ func trim(s string, max int) string {
 	return s[:max] + "…"
 }
 
-// PrintResultJSON prints the result as JSON to w.
+// PrintResultJSON prints the result as JSON to w with metadata.
 func PrintResultJSON(w io.Writer, r *analysis.Result) {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	_ = enc.Encode(resultToJSON(r))
 }
 
-// PrintResultsJSON prints multiple results as a JSON object with "results" array.
+// PrintResultsJSON prints multiple results as a JSON object with metadata.
 func PrintResultsJSON(w io.Writer, results []*analysis.Result) {
-	out := make([]interface{}, 0, len(results))
-	for _, r := range results {
-		out = append(out, resultToJSON(r))
+	type metadata struct {
+		TotalResults int    `json:"total_results"`
+		TotalSources int    `json:"total_sources"`
+		TotalSinks   int    `json:"total_sinks"`
+		Timestamp    string `json:"timestamp"`
+		Tool         string `json:"tool"`
+		Version      string `json:"version"`
 	}
+	
+	totalSources := 0
+	totalSinks := 0
+	var firstTimestamp string
+	if len(results) > 0 {
+		firstTimestamp = results[0].Timestamp
+	}
+	
+	for _, r := range results {
+		totalSources += len(r.Sources)
+		totalSinks += len(r.Sinks)
+	}
+	
+	meta := metadata{
+		TotalResults: len(results),
+		TotalSources: totalSources,
+		TotalSinks:   totalSinks,
+		Timestamp:    firstTimestamp,
+		Tool:         "SSFinder",
+		Version:      "1.0.0",
+	}
+	
+	output := map[string]interface{}{
+		"metadata": meta,
+		"results":  results,
+	}
+	
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	_ = enc.Encode(map[string]interface{}{"results": out})
+	_ = enc.Encode(output)
 }
 
 func resultToJSON(r *analysis.Result) interface{} {
@@ -150,11 +189,11 @@ func resultToJSON(r *analysis.Result) interface{} {
 		Desc     string `json:"description"`
 	}
 	out := struct {
-		Target  string    `json:"target"`
-		Sources []jSource `json:"sources"`
-		Sinks   []jSink   `json:"sinks"`
+		Target   string    `json:"target"`
+		Sources  []jSource `json:"sources"`
+		Sinks    []jSink   `json:"sinks"`
 	}{
-		Target: r.Target,
+		Target:   r.Target,
 	}
 	for _, s := range r.Sources {
 		out.Sources = append(out.Sources, jSource{Name: s.Name, Line: s.Line, Category: s.Category, Desc: s.Description})

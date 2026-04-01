@@ -1,20 +1,10 @@
-# Binaries
+# Build binary
 ssfinder
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
+dist/
 
-# Test binary
-*.test
-
-# Output
+# Test coverage
 coverage.out
-*.out
-
-# Go workspace
-go.work
+coverage.html
 
 # IDE
 .idea/
@@ -26,3 +16,8 @@ go.work
 # OS
 .DS_Store
 Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
