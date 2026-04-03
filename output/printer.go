@@ -112,9 +112,6 @@ func PrintResult(w io.Writer, r *analysis.Result) {
 		fmt.Fprintln(w)
 	}
 
-	if srcCount == 0 && sinkCount == 0 {
-		fmt.Fprintf(w, "  %sNo sources or sinks found.%s\n", Dim, Reset)
-	}
 	fmt.Fprintln(w)
 }
 
@@ -181,12 +178,14 @@ func resultToJSON(r *analysis.Result) interface{} {
 		Line     int    `json:"line"`
 		Category string `json:"category"`
 		Desc     string `json:"description"`
+		Code     string `json:"code"`
 	}
 	type jSink struct {
 		Name     string `json:"name"`
 		Line     int    `json:"line"`
 		Category string `json:"category"`
 		Desc     string `json:"description"`
+		Code     string `json:"code"`
 	}
 	out := struct {
 		Target   string    `json:"target"`
@@ -196,10 +195,10 @@ func resultToJSON(r *analysis.Result) interface{} {
 		Target:   r.Target,
 	}
 	for _, s := range r.Sources {
-		out.Sources = append(out.Sources, jSource{Name: s.Name, Line: s.Line, Category: s.Category, Desc: s.Description})
+		out.Sources = append(out.Sources, jSource{Name: s.Name, Line: s.Line, Category: s.Category, Desc: s.Description, Code: strings.TrimSpace(s.Snippet)})
 	}
 	for _, s := range r.Sinks {
-		out.Sinks = append(out.Sinks, jSink{Name: s.Name, Line: s.Line, Category: s.Category, Desc: s.Description})
+		out.Sinks = append(out.Sinks, jSink{Name: s.Name, Line: s.Line, Category: s.Category, Desc: s.Description, Code: strings.TrimSpace(s.Snippet)})
 	}
 	return out
 }

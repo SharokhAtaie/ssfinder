@@ -184,19 +184,20 @@ func analyzeFileOrDir(path string, console io.Writer, outFile *os.File, jsonOut 
 			close(resultChan)
 		}()
 		
-		// Collect results
-		var allResults, fileResults []*analysis.Result
+		// Collect results (only those with findings)
+		var allResults []*analysis.Result
 		for res := range resultChan {
-			allResults = append(allResults, res)
 			if hasFindings(res) {
-				fileResults = append(fileResults, res)
+				allResults = append(allResults, res)
 			}
 		}
 		
 		if jsonOut {
-			output.PrintResultsJSON(console, allResults)
-			if outFile != nil && len(fileResults) > 0 {
-				output.PrintResultsJSON(outFile, fileResults)
+			if len(allResults) > 0 {
+				output.PrintResultsJSON(console, allResults)
+				if outFile != nil {
+					output.PrintResultsJSON(outFile, allResults)
+				}
 			}
 		} else {
 			for _, res := range allResults {
@@ -250,14 +251,15 @@ func analyzeOneFile(path string) *analysis.Result {
 }
 
 func printResult(console io.Writer, outFile *os.File, res *analysis.Result, jsonOut bool) {
-	// Always show in console
+	if !hasFindings(res) {
+		return
+	}
 	if jsonOut {
 		output.PrintResultJSON(console, res)
 	} else {
 		output.PrintResult(console, res)
 	}
-	// Save to file only if target has sources or sinks
-	if outFile != nil && hasFindings(res) {
+	if outFile != nil {
 		if jsonOut {
 			output.PrintResultJSON(outFile, res)
 		} else {
