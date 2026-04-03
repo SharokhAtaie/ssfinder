@@ -13,66 +13,56 @@ type Sink struct {
 }
 
 // SinkDefinitions define dangerous sinks for DOM XSS.
-// Category: Navigation = Critical; DOM/SVG = High; React/Vue/Angular/jQuery = Medium; Other = Low
+// Only directly exploitable sinks are included to minimize false positives.
 var SinkDefinitions = []struct {
 	Name        string
 	Pattern     string
 	Description string
 	Category    string
 }{
-	// Navigation / URL Redirection (CRITICAL - can lead to phishing, credential theft)
-	{"location.href =", `(?i)(?:window\.)?location\.href\s*=`, "URL redirect", "Navigation"},
-	{"location.replace", `(?i)(?:window\.)?location\.replace\s*\(`, "URL replace", "Navigation"},
-	{"location.assign", `(?i)(?:window\.)?location\.assign\s*\(`, "URL assign", "Navigation"},
-	{"window.open", `(?i)window\.open\s*\(`, "Window open", "Navigation"},
-	{"document.location =", `(?i)document\.location\s*=`, "Document location assignment", "Navigation"},
-	{"document.location.href =", `(?i)document\.location\.href\s*=`, "Document location href", "Navigation"},
-	{"document.location.replace", `(?i)document\.location\.replace\s*\(`, "Document location replace", "Navigation"},
-	{"document.location.assign", `(?i)document\.location\.assign\s*\(`, "Document location assign", "Navigation"},
-	
+	// Navigation / URL Redirection (CRITICAL)
+	{"location.href =", `(?:window\.)?location\.href\s*=[^=]`, "URL redirect", "Navigation"},
+	{"location.replace", `(?:window\.)?location\.replace\s*\(`, "URL replace", "Navigation"},
+	{"location.assign", `(?:window\.)?location\.assign\s*\(`, "URL assign", "Navigation"},
+	{"window.open", `window\.open\s*\(`, "Window open", "Navigation"},
+	{"document.location =", `document\.location\s*=[^=]`, "Document location assignment", "Navigation"},
+	{"document.location.href =", `document\.location\.href\s*=[^=]`, "Document location href", "Navigation"},
+	{"document.location.replace", `document\.location\.replace\s*\(`, "Document location replace", "Navigation"},
+	{"document.location.assign", `document\.location\.assign\s*\(`, "Document location assign", "Navigation"},
+
 	// DOM HTML Injection (HIGH - direct XSS)
-	{"innerHTML =", `(?i)\.innerHTML\s*=[^=]`, "innerHTML assignment", "DOM"},
-	{"innerHTML +=", `(?i)\.innerHTML\s*\+\=`, "innerHTML append", "DOM"},
-	{"outerHTML =", `(?i)\.outerHTML\s*=[^=]`, "outerHTML assignment", "DOM"},
-	{"document.write", `(?i)document\.write\s*\(`, "document.write", "DOM"},
-	{"document.writeln", `(?i)document\.writeln\s*\(`, "document.writeln", "DOM"},
-	{"document.open", `(?i)document\.open\s*\(`, "document.open", "DOM"},
-	
-	// DOM Insertion Methods (HIGH - can inject HTML)
-	{"insertAdjacentHTML", `(?i)\.insertAdjacentHTML\s*\(`, "insertAdjacentHTML", "DOM"},
-	{"createContextualFragment", `(?i)createContextualFragment\s*\(`, "createContextualFragment", "DOM"},
-	
+	{"innerHTML =", `\.innerHTML\s*=[^=]`, "innerHTML assignment", "DOM"},
+	{"innerHTML +=", `\.innerHTML\s*\+=`, "innerHTML append", "DOM"},
+	{"outerHTML =", `\.outerHTML\s*=[^=]`, "outerHTML assignment", "DOM"},
+	{"document.write", `document\.write\s*\(`, "document.write", "DOM"},
+	{"document.writeln", `document\.writeln\s*\(`, "document.writeln", "DOM"},
+	{"insertAdjacentHTML", `\.insertAdjacentHTML\s*\(`, "insertAdjacentHTML", "DOM"},
+
 	// Script Injection (CRITICAL)
-	{"eval", `(?i)\beval\s*\(`, "eval() execution", "Execution"},
-	{"setTimeout string", `(?i)setTimeout\s*\(\s*["']`, "setTimeout with string", "Execution"},
-	{"setInterval string", `(?i)setInterval\s*\(\s*["']`, "setInterval with string", "Execution"},
-	{"execScript", `(?i)execScript\s*\(`, "execScript", "Execution"},
-	
-	// React (MEDIUM - framework-level XSS)
-	{"dangerouslySetInnerHTML", `(?i)dangerouslySetInnerHTML\b`, "dangerouslySetInnerHTML", "React"},
-	{"__html", `\b__html\s*:`, "__html property", "React"},
-	
+	{"eval", `\beval\s*\(`, "eval() execution", "Execution"},
+	{"setTimeout string", `setTimeout\s*\(\s*["']`, "setTimeout with string", "Execution"},
+	{"setInterval string", `setInterval\s*\(\s*["']`, "setInterval with string", "Execution"},
+
+	// React (MEDIUM)
+	{"dangerouslySetInnerHTML", `dangerouslySetInnerHTML\s*=\s*\{`, "dangerouslySetInnerHTML usage", "React"},
+
 	// Vue (MEDIUM)
-	{"v-html", `(?i)v-html\s*[=:]`, "v-html directive", "Vue"},
-	
+	{"v-html", `v-html\s*=`, "v-html directive", "Vue"},
+
 	// Angular (MEDIUM)
-	{"bypassSecurityTrustHtml", `(?i)bypassSecurityTrustHtml\s*\(`, "bypassSecurityTrustHtml", "Angular"},
-	{"bypassSecurityTrustScript", `(?i)bypassSecurityTrustScript\s*\(`, "bypassSecurityTrustScript", "Angular"},
-	{"bypassSecurityTrustStyle", `(?i)bypassSecurityTrustStyle\s*\(`, "bypassSecurityTrustStyle", "Angular"},
-	{"bypassSecurityTrustUrl", `(?i)bypassSecurityTrustUrl\s*\(`, "bypassSecurityTrustUrl", "Angular"},
-	{"bypassSecurityTrustResourceUrl", `(?i)bypassSecurityTrustResourceUrl\s*\(`, "bypassSecurityTrustResourceUrl", "Angular"},
-	
+	{"bypassSecurityTrustHtml", `bypassSecurityTrustHtml\s*\(`, "bypassSecurityTrustHtml", "Angular"},
+	{"bypassSecurityTrustScript", `bypassSecurityTrustScript\s*\(`, "bypassSecurityTrustScript", "Angular"},
+	{"bypassSecurityTrustUrl", `bypassSecurityTrustUrl\s*\(`, "bypassSecurityTrustUrl", "Angular"},
+	{"bypassSecurityTrustResourceUrl", `bypassSecurityTrustResourceUrl\s*\(`, "bypassSecurityTrustResourceUrl", "Angular"},
+
 	// jQuery (MEDIUM)
-	{"jQuery.html()", `(?i)\$\([^)]+\)\.html\s*\(`, "jQuery .html()", "jQuery"},
-	{"$.html()", `(?i)\$\.html\s*\(`, "$.html()", "jQuery"},
-	{"jQuery.append()", `(?i)\$\([^)]+\)\.append\s*\(`, "jQuery .append()", "jQuery"},
-	{"jQuery.prepend()", `(?i)\$\([^)]+\)\.prepend\s*\(`, "jQuery .prepend()", "jQuery"},
-	{"jQuery.after()", `(?i)\$\([^)]+\)\.after\s*\(`, "jQuery .after()", "jQuery"},
-	{"jQuery.before()", `(?i)\$\([^)]+\)\.before\s*\(`, "jQuery .before()", "jQuery"},
-	{"jQuery.replaceWith()", `(?i)\$\([^)]+\)\.replaceWith\s*\(`, "jQuery .replaceWith()", "jQuery"},
-	{"jQuery.wrap()", `(?i)\$\([^)]+\)\.wrap\s*\(`, "jQuery .wrap()", "jQuery"},
-	{"jQuery.wrapAll()", `(?i)\$\([^)]+\)\.wrapAll\s*\(`, "jQuery .wrapAll()", "jQuery"},
-	{"$.parseHTML", `(?i)\$\.parseHTML\s*\(`, "$.parseHTML()", "jQuery"},
+	{"jQuery.html()", `\$\([^)]+\)\.html\s*\(`, "jQuery .html()", "jQuery"},
+	{"jQuery.append()", `\$\([^)]+\)\.append\s*\(`, "jQuery .append()", "jQuery"},
+	{"jQuery.prepend()", `\$\([^)]+\)\.prepend\s*\(`, "jQuery .prepend()", "jQuery"},
+	{"jQuery.after()", `\$\([^)]+\)\.after\s*\(`, "jQuery .after()", "jQuery"},
+	{"jQuery.before()", `\$\([^)]+\)\.before\s*\(`, "jQuery .before()", "jQuery"},
+	{"jQuery.replaceWith()", `\$\([^)]+\)\.replaceWith\s*\(`, "jQuery .replaceWith()", "jQuery"},
+	{"$.parseHTML", `\$\.parseHTML\s*\(`, "$.parseHTML()", "jQuery"},
 }
 
 // compiledSinkRegexps holds pre-compiled regex patterns for performance.

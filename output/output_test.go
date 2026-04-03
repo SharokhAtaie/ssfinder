@@ -48,7 +48,6 @@ func TestPrintResult(t *testing.T) {
 func TestPrintResultJSON(t *testing.T) {
 	result := &analysis.Result{
 		Target:    "test.js",
-		Timestamp: "2024-01-01T00:00:00Z",
 		Sources: []analysis.Source{
 			{Name: "URLSearchParams", Line: 1, Category: "URL", Description: "URL params"},
 		},
@@ -83,13 +82,11 @@ func TestPrintResultsJSON(t *testing.T) {
 	results := []*analysis.Result{
 		{
 			Target:    "test1.js",
-			Timestamp: "2024-01-01T00:00:00Z",
 			Sources:   []analysis.Source{{Name: "URLSearchParams", Line: 1, Category: "URL"}},
 			Sinks:     []analysis.Sink{{Name: "innerHTML =", Line: 2, Category: "DOM"}},
 		},
 		{
 			Target:    "test2.js",
-			Timestamp: "2024-01-01T00:00:00Z",
 			Sources:   []analysis.Source{{Name: "localStorage.getItem", Line: 5, Category: "Storage"}},
 			Sinks:     []analysis.Sink{},
 		},

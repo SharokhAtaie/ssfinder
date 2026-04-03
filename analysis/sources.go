@@ -17,44 +17,45 @@ type Source struct {
 }
 
 // Predefined DOM XSS sources (user-controllable data).
-// Includes browser APIs + framework-specific (React, Vue, Next.js, Angular, Svelte, SolidJS).
+// Only attacker-controllable inputs that can directly reach sinks.
 var SourceDefinitions = []struct {
 	Name        string
 	Pattern     string
 	Description string
 	Category    string
 }{
-	// Browser / URL - High Priority
-	{"URLSearchParams", `(?i)(?:new\s+)?URLSearchParams\s*\(`, "URL params", "URL"},
-	{"searchParams.get", `(?i)searchParams\.get\s*\(`, "Get URL param", "URL"},
-	{"searchParams.getAll", `(?i)searchParams\.getAll\s*\(`, "Get all URL params", "URL"},
-	
-	// Storage - Medium Priority
-	{"localStorage.getItem", `(?i)localStorage\.getItem\s*\(`, "LocalStorage read", "Storage"},
-	{"localStorage[]", `(?i)localStorage\s*\[`, "LocalStorage bracket access", "Storage"},
-	{"sessionStorage.getItem", `(?i)sessionStorage\.getItem\s*\(`, "SessionStorage read", "Storage"},
-	{"sessionStorage[]", `(?i)sessionStorage\s*\[`, "SessionStorage bracket access", "Storage"},
-	
-	// Message / Web APIs - Medium Priority
-	{"postMessage listener", `(?i)(?:window\.)?addEventListener\s*\(\s*['\"]message['\"]`, "PostMessage listener", "Message"},
-	{"postMessage wildcard", `(?i)\.postMessage\s*\([^,]+,\s*['""]\*['""]`, "postMessage with wildcard origin", "Message"},
-	{"MessagePort", `(?i)(?:new\s+)?MessagePort\s*\(`, "MessagePort communication", "Message"},
-	
-	// React / React Router - High Priority
-	{"useSearchParams", `(?:\buseSearchParams\s*\(|\.useSearchParams\s*\))`, "React Router query", "React"},
-	{"useParams", `(?:\buseParams\s*\(|\.useParams\s*\))`, "React Router params", "React"},
-	
-	// Next.js / Vue Router - High Priority
-	{"router.query", `(?i)router\.query\b`, "Next.js route query", "Router"},
-	{"route.query", `(?i)route\.query\b`, "Vue/React route query", "Router"},
-	{"route.params", `(?i)route\.params\b`, "Vue/React route params", "Router"},
-	{"$route.query", `(?i)\$route\.query\b`, "Vue route query", "Router"},
-	{"$route.params", `(?i)\$route\.params\b`, "Vue route params", "Router"},
-	
-	// Svelte / SvelteKit - Medium Priority
-	{"$page.url", `(?i)\$page\.url\b`, "SvelteKit page URL", "Svelte"},
-	{"$page.params", `(?i)\$page\.params\b`, "SvelteKit page params", "Svelte"},
-	{"$page.query", `(?i)\$page\.query\b`, "SvelteKit page query", "Svelte"},
+	// Browser URL properties - directly attacker-controlled
+	{"location.hash", `(?:window\.)?location\.hash\b`, "URL fragment", "URL"},
+	{"URLSearchParams", `(?:new\s+)?URLSearchParams\s*\(`, "URL params", "URL"},
+	{"searchParams.get", `searchParams\.get\s*\(`, "Get URL param", "URL"},
+	{"searchParams.getAll", `searchParams\.getAll\s*\(`, "Get all URL params", "URL"},
+
+	// Storage - attacker can poison via XSS or subdomain
+	{"localStorage.getItem", `localStorage\.getItem\s*\(`, "LocalStorage read", "Storage"},
+	{"localStorage[]", `localStorage\s*\[`, "LocalStorage bracket access", "Storage"},
+	{"sessionStorage.getItem", `sessionStorage\.getItem\s*\(`, "SessionStorage read", "Storage"},
+	{"sessionStorage[]", `sessionStorage\s*\[`, "SessionStorage bracket access", "Storage"},
+
+	// Message - attacker can send cross-origin messages
+	{"postMessage listener", `(?:window\.)?addEventListener\s*\(\s*['"]message['"]`, "PostMessage listener", "Message"},
+	{"postMessage wildcard", `\.postMessage\s*\([^,]+,\s*['"]\*['"]`, "postMessage with wildcard origin", "Message"},
+	{"MessageChannel", `new\s+MessageChannel\s*\(`, "MessageChannel creation", "Message"},
+	{"port.onmessage", `\.onmessage\s*=`, "Port message handler", "Message"},
+
+	// React / React Router
+	{"useSearchParams", `\buseSearchParams\s*\(`, "React Router query", "React"},
+	{"useParams", `\buseParams\s*\(`, "React Router params", "React"},
+
+	// Next.js / Vue Router
+	{"router.query", `router\.query\b`, "Next.js route query", "Router"},
+	{"route.query", `route\.query\b`, "Vue/React route query", "Router"},
+	{"route.params", `route\.params\b`, "Vue/React route params", "Router"},
+	{"$route.query", `\$route\.query\b`, "Vue route query", "Router"},
+	{"$route.params", `\$route\.params\b`, "Vue route params", "Router"},
+
+	// Svelte / SvelteKit
+	{"$page.url", `\$page\.url\b`, "SvelteKit page URL", "Svelte"},
+	{"$page.params", `\$page\.params\b`, "SvelteKit page params", "Svelte"},
 }
 
 // compiledSourceRegexps holds pre-compiled regex patterns for performance.

@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/SharokhAtaie/ssfinder/analysis"
 	"github.com/SharokhAtaie/ssfinder/functions"
@@ -226,7 +225,6 @@ func processURL(u string, console io.Writer, outFile *os.File, jsonOut bool) {
 	// Beautify URL response so minified/one-line JS gets meaningful line numbers
 	code = functions.BeautifyJS(code)
 	res := analysis.Run(code, u)
-	res.Timestamp = time.Now().Format(time.RFC3339)
 	printResult(console, outFile, res, jsonOut)
 }
 
@@ -246,7 +244,6 @@ func analyzeOneFile(path string) *analysis.Result {
 		code = functions.BeautifyJS(code)
 	}
 	res := analysis.Run(code, path)
-	res.Timestamp = time.Now().Format(time.RFC3339)
 	return res
 }
 

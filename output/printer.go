@@ -130,60 +130,29 @@ func PrintResultJSON(w io.Writer, r *analysis.Result) {
 	_ = enc.Encode(resultToJSON(r))
 }
 
-// PrintResultsJSON prints multiple results as a JSON object with metadata.
+// PrintResultsJSON prints multiple results as a JSON array.
 func PrintResultsJSON(w io.Writer, results []*analysis.Result) {
-	type metadata struct {
-		TotalResults int    `json:"total_results"`
-		TotalSources int    `json:"total_sources"`
-		TotalSinks   int    `json:"total_sinks"`
-		Timestamp    string `json:"timestamp"`
-		Tool         string `json:"tool"`
-		Version      string `json:"version"`
-	}
-	
-	totalSources := 0
-	totalSinks := 0
-	var firstTimestamp string
-	if len(results) > 0 {
-		firstTimestamp = results[0].Timestamp
-	}
-	
-	for _, r := range results {
-		totalSources += len(r.Sources)
-		totalSinks += len(r.Sinks)
-	}
-	
-	meta := metadata{
-		TotalResults: len(results),
-		TotalSources: totalSources,
-		TotalSinks:   totalSinks,
-		Timestamp:    firstTimestamp,
-		Tool:         "SSFinder",
-		Version:      "1.0.0",
-	}
-	
-	output := map[string]interface{}{
-		"metadata": meta,
-		"results":  results,
+	// Convert results to JSON-safe format without Category
+	jsonResults := make([]interface{}, len(results))
+	for i, r := range results {
+		jsonResults[i] = resultToJSON(r)
 	}
 	
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	_ = enc.Encode(output)
+	_ = enc.Encode(jsonResults)
 }
 
 func resultToJSON(r *analysis.Result) interface{} {
 	type jSource struct {
 		Name     string `json:"name"`
 		Line     int    `json:"line"`
-		Category string `json:"category"`
 		Desc     string `json:"description"`
 		Code     string `json:"code"`
 	}
 	type jSink struct {
 		Name     string `json:"name"`
 		Line     int    `json:"line"`
-		Category string `json:"category"`
 		Desc     string `json:"description"`
 		Code     string `json:"code"`
 	}
@@ -195,10 +164,10 @@ func resultToJSON(r *analysis.Result) interface{} {
 		Target:   r.Target,
 	}
 	for _, s := range r.Sources {
-		out.Sources = append(out.Sources, jSource{Name: s.Name, Line: s.Line, Category: s.Category, Desc: s.Description, Code: strings.TrimSpace(s.Snippet)})
+		out.Sources = append(out.Sources, jSource{Name: s.Name, Line: s.Line, Desc: s.Description, Code: strings.TrimSpace(s.Snippet)})
 	}
 	for _, s := range r.Sinks {
-		out.Sinks = append(out.Sinks, jSink{Name: s.Name, Line: s.Line, Category: s.Category, Desc: s.Description, Code: strings.TrimSpace(s.Snippet)})
+		out.Sinks = append(out.Sinks, jSink{Name: s.Name, Line: s.Line, Desc: s.Description, Code: strings.TrimSpace(s.Snippet)})
 	}
 	return out
 }

@@ -9,7 +9,6 @@ type Result struct {
 	Target    string
 	Sources   []Source
 	Sinks     []Sink
-	Timestamp string
 }
 
 // Run finds all sources and sinks in code with deduplication and risk scoring.
