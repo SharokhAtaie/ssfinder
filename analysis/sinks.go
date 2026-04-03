@@ -31,9 +31,6 @@ var SinkDefinitions = []struct {
 	{"document.location.assign", `document\.location\.assign\s*\(`, "Document location assign", "Navigation"},
 
 	// DOM HTML Injection (HIGH - direct XSS)
-	{"innerHTML =", `\.innerHTML\s*=[^=]`, "innerHTML assignment", "DOM"},
-	{"innerHTML +=", `\.innerHTML\s*\+=`, "innerHTML append", "DOM"},
-	{"outerHTML =", `\.outerHTML\s*=[^=]`, "outerHTML assignment", "DOM"},
 	{"document.write", `document\.write\s*\(`, "document.write", "DOM"},
 	{"document.writeln", `document\.writeln\s*\(`, "document.writeln", "DOM"},
 	{"insertAdjacentHTML", `\.insertAdjacentHTML\s*\(`, "insertAdjacentHTML", "DOM"},
