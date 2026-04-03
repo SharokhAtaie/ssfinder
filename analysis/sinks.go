@@ -5,7 +5,7 @@ import "regexp"
 // Sink represents a dangerous DOM XSS sink.
 type Sink struct {
 	Name        string
-	Pattern     string
+	Pattern     string `json:"-"`
 	Description string
 	Category    string
 	Line        int

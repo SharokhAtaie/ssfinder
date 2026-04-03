@@ -9,7 +9,7 @@ import (
 // Source represents a DOM XSS source (user-controllable input).
 type Source struct {
 	Name        string
-	Pattern     string
+	Pattern     string `json:"-"`
 	Description string
 	Category    string
 	Line        int
