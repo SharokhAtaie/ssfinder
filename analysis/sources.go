@@ -25,16 +25,9 @@ var SourceDefinitions = []struct {
 	Category    string
 }{
 	// Browser URL properties - directly attacker-controlled
-	{"location.hash", `(?:window\.)?location\.hash\b`, "URL fragment", "URL"},
 	{"URLSearchParams", `(?:new\s+)?URLSearchParams\s*\(`, "URL params", "URL"},
 	{"searchParams.get", `searchParams\.get\s*\(`, "Get URL param", "URL"},
 	{"searchParams.getAll", `searchParams\.getAll\s*\(`, "Get all URL params", "URL"},
-
-	// Storage - attacker can poison via XSS or subdomain
-	{"localStorage.getItem", `localStorage\.getItem\s*\(`, "LocalStorage read", "Storage"},
-	{"localStorage[]", `localStorage\s*\[`, "LocalStorage bracket access", "Storage"},
-	{"sessionStorage.getItem", `sessionStorage\.getItem\s*\(`, "SessionStorage read", "Storage"},
-	{"sessionStorage[]", `sessionStorage\s*\[`, "SessionStorage bracket access", "Storage"},
 
 	// Message - attacker can send cross-origin messages
 	{"postMessage listener", `(?:window\.)?addEventListener\s*\(\s*['"]message['"]`, "PostMessage listener", "Message"},
