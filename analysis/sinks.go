@@ -35,11 +35,6 @@ var SinkDefinitions = []struct {
 	{"document.writeln", `document\.writeln\s*\(`, "document.writeln", "DOM"},
 	{"insertAdjacentHTML", `\.insertAdjacentHTML\s*\(`, "insertAdjacentHTML", "DOM"},
 
-	// Script Injection (CRITICAL)
-	{"eval", `\beval\s*\(`, "eval() execution", "Execution"},
-	{"setTimeout string", `setTimeout\s*\(\s*["']`, "setTimeout with string", "Execution"},
-	{"setInterval string", `setInterval\s*\(\s*["']`, "setInterval with string", "Execution"},
-
 	// React (MEDIUM)
 	{"dangerouslySetInnerHTML", `dangerouslySetInnerHTML\s*=\s*\{`, "dangerouslySetInnerHTML usage", "React"},
 
